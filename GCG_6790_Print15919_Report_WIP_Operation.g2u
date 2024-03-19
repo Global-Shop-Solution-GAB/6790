@@ -1,0 +1,103 @@
+﻿Program.Sub.Preflight.Start
+
+Program.Sub.Preflight.End
+'ARC#6790
+'Customer:PREFIX CORP
+'	Jun 2022, Nam Le
+
+
+'hook#15919
+'print from custom table and delete data
+
+Program.Sub.Main.Start
+f.Intrinsic.Control.Try
+	v.global.sSel.Declare(String)
+	V.Local.iRet.Declare(Long,7)
+	V.global.srptLoc.Declare(String)
+	V.global.iRptId.Declare(Long)
+	v.Local.iBIRunID.Declare(Long)
+	V.Local.iLogID.Declare(Long)
+	V.global.sTPrinter.Declare(String)
+	V.global.sScrapPrinter.Declare(String)
+	v.Local.sRet.Declare(String)
+	
+	Function.Intrinsic.UI.UsePixels ' Allows you to use Pixels instead of Twips throughout
+	f.Intrinsic.Control.If(V.Caller.Hook,!=,"15919")
+		f.Intrinsic.Control.End
+	f.Intrinsic.Control.EndIf
+	
+	'Print
+	f.ODBC.Connection!Con.OpenCompanyConnection
+	
+	'Printer info
+	F.Intrinsic.String.Concat(V.Caller.BusintDir,"\Labels\Custom\GAB_5455_WIP_Opertation_Label.lab",V.global.srptLoc)
+	F.Global.BI.InitializeReport("GAB_5455_WIP_Operation_Label",V.global.srptLoc,V.global.iRptId)
+	
+	F.Intrinsic.String.Concat("select Printer,ScrapPrinter from GAB_5455_MVE_TKT_SU where TRMNL='",V.Caller.Terminal,"'",V.global.sSel)
+	F.ODBC.Connection!Con.OpenRecordsetRO("rstSel",V.global.sSel)
+		F.Intrinsic.Control.If(V.ODBC.Con!rstSel.EOF,=,False)
+			V.global.sTPrinter.Set(V.ODBC.Con!rstSel.FieldValTrim!Printer)
+			F.Intrinsic.Control.If(V.ODBC.Con!rstSel.FieldValTrim!ScrapPrinter,=,"")
+			V.global.sScrapPrinter.Set(V.global.sTPrinter)
+			F.Intrinsic.Control.Else
+			V.global.sScrapPrinter.Set(V.ODBC.Con!rstSel.FieldValTrim!ScrapPrinter)
+			F.Intrinsic.Control.EndIf
+		F.Intrinsic.Control.EndIf
+		
+	
+	F.Intrinsic.String.Concat("select * from GCG_6790_WIP_OP_LABL_TEMP where TRMNL='",V.Caller.Terminal,"'",V.global.sSel)
+	F.Data.DataTable.CreateFromSQL("LabelTemp", "Con", V.Global.sSel)
+			
+	F.Intrinsic.Control.If(V.DataTable.LabelTemp.Exists,=,True)
+		F.Intrinsic.Control.If(V.DataTable.LabelTemp.RowCount--,<>,-1)
+				F.Global.BI.GetIDFromName("GAB_5455_WIP_Opertation_Label.lab",V.Global.iRptId)
+				
+				'check Label flag to decide ReportID and Printer
+				f.Data.Datatable.Select("LabelTemp", "LabelFlag='2'", v.Local.sRet)
+				f.Intrinsic.Control.If(v.Local.sRet,!=,"***NORETURN***")
+					F.Global.BI.GetIDFromName("GCG_6790_WIP_to_FG.lab",V.Global.iRptId)
+					v.Global.sTPrinter.Set(v.Global.sScrapPrinter)	
+				f.Intrinsic.Control.EndIf
+				
+				F.Global.BI.GetRunID(v.Local.iBIRunID)
+				F.Global.BI.StartLogging(V.Local.iBIRunID, V.Global.iRptId, 0,"",V.Local.iLogID)
+				
+				'REPEAT till user says OK
+				V.Local.iRet.Set(0)
+				
+				F.Intrinsic.Control.DoUntil(V.Local.iRet,=, 6)
+				
+				
+				
+					'PRINT
+					'comment out for testing
+					'-----------------------------------------------------
+					F.Global.BI.PrintCodesoftLabelFromDataTable(V.Local.iBIRunID, V.Local.iLogID, "LabelTemp",v.Global.sTPrinter,True)
+					'-----------------------------------------------------
+					
+					
+					
+					F.Intrinsic.UI.Msgbox("Did the label print correctly?", "Label Printed",4,V.Local.iRet)
+				F.Intrinsic.Control.Loop
+				
+			F.Global.BI.StopLogging(V.Local.iLogID)
+		F.Intrinsic.Control.EndIf
+		F.Data.DataTable.Close("LabelTemp")
+	F.Intrinsic.Control.EndIf
+	
+	'Delete by Terminal
+	F.Intrinsic.String.Concat("delete from GCG_6790_WIP_OP_LABL_TEMP where TRMNL='",V.Caller.Terminal,"'",V.global.sSel)
+	f.ODBC.Connection!Con.Execute(V.global.sSel)
+	
+	f.ODBC.Connection!Con.Close
+	
+f.Intrinsic.Control.Catch
+	f.Intrinsic.UI.Msgbox(v.Ambient.ErrorDescription)
+f.Intrinsic.Control.EndTry
+
+Program.Sub.Main.End
+
+Program.Sub.Comments.Start
+${$5$}$3.0.0.0$}$1
+${$6$}$nle$}$20220614161859241$}$kjzCRYkA6UEoRnCwndYnRZx+VYO5SvmIppx024HPdlMa8lgqsvTCWOUReU5q4EBx
+Program.Sub.Comments.End
