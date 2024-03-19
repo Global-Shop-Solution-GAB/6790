@@ -1,0 +1,281 @@
+﻿Program.Sub.ScreenSU.Start
+Gui.Form..Create(BaseForm)
+Gui.Form..Caption("CUSTOMERS WITH SPECIAL LABEL MAINTENANCE")
+Gui.Form..Size(507,720)
+Gui.Form..MinX(0)
+Gui.Form..MinY(0)
+Gui.Form..Position(0,0)
+Gui.Form..AlwaysOnTop(False)
+Gui.Form..FontName("Tahoma")
+Gui.Form..FontSize(8.25)
+Gui.Form..ControlBox(True)
+Gui.Form..MaxButton(True)
+Gui.Form..MinButton(True)
+Gui.Form..MousePointer(0)
+Gui.Form..Moveable(True)
+Gui.Form..Sizeable(True)
+Gui.Form..ShowInTaskBar(True)
+Gui.Form..TitleBar(True)
+Gui.Form..Event(UnLoad,Unload)
+Gui.Form.GsgcCust.Create(GsGridControl)
+Gui.Form.GsgcCust.Enabled(True)
+Gui.Form.GsgcCust.Visible(True)
+Gui.Form.GsgcCust.Zorder(0)
+Gui.Form.GsgcCust.Size(498,634)
+Gui.Form.GsgcCust.Position(4,52)
+Gui.Form.GsgcCust.Anchor(15)
+Gui.Form.GsgcCust.Event(CellValueChanged,GsgcCust_CellValueChanged)
+Gui.Form.GsgcCust.Event(RowCellClick,GsgcCust_RowCellClick)
+Gui.Form.cmdAdd.Create(Button)
+Gui.Form.cmdAdd.Enabled(True)
+Gui.Form.cmdAdd.Visible(True)
+Gui.Form.cmdAdd.Zorder(0)
+Gui.Form.cmdAdd.Size(130,23)
+Gui.Form.cmdAdd.Position(107,18)
+Gui.Form.cmdAdd.Caption("ADD A NEW CUSTOMER")
+Gui.Form.cmdAdd.FontName("Tahoma")
+Gui.Form.cmdAdd.FontSize(8.25)
+Gui.Form.cmdAdd.Event(Click,cmdAdd_Click)
+Gui.Form.cmdRefresh.Create(Button)
+Gui.Form.cmdRefresh.Enabled(True)
+Gui.Form.cmdRefresh.Visible(True)
+Gui.Form.cmdRefresh.Zorder(0)
+Gui.Form.cmdRefresh.Size(55,23)
+Gui.Form.cmdRefresh.Position(11,19)
+Gui.Form.cmdRefresh.Caption("REFRESH")
+Gui.Form.cmdRefresh.FontName("Tahoma")
+Gui.Form.cmdRefresh.FontSize(8.25)
+Gui.Form.cmdRefresh.Event(Click,Refresh)
+Gui.Form.cmdDelRows.Create(Button)
+Gui.Form.cmdDelRows.Enabled(True)
+Gui.Form.cmdDelRows.Visible(True)
+Gui.Form.cmdDelRows.Zorder(0)
+Gui.Form.cmdDelRows.Size(134,23)
+Gui.Form.cmdDelRows.Position(321,19)
+Gui.Form.cmdDelRows.Caption("DELETE SELECTED ROWS")
+Gui.Form.cmdDelRows.FontName("Tahoma")
+Gui.Form.cmdDelRows.FontSize(8.25)
+Gui.Form.cmdDelRows.Event(Click,cmdDelRows_Click)
+Program.Sub.ScreenSU.End
+
+Program.Sub.Preflight.Start
+Program.Sub.Preflight.End
+
+'ARC#6790
+'Customer:PREFIX CORP
+'	Jun 2022, Nam Le
+
+'This script maintain the list of customers that will be used in printing new labels 6790
+
+Program.Sub.Main.Start
+
+f.Intrinsic.Control.Try
+
+	Function.Intrinsic.UI.UsePixels ' Allows you to use Pixels instead of Twips throughout
+	
+	'Getdata
+	f.Intrinsic.Control.CallSub(GetData)
+	'Format Grid
+	f.Intrinsic.Control.CallSub(FormatGrid)
+	
+	'Display
+	gui.Form..Show
+
+f.Intrinsic.Control.Catch
+	f.Intrinsic.Control.CallSub(Catching)
+f.Intrinsic.Control.EndTry
+Program.Sub.Main.End
+
+'refresh form
+Program.Sub.Refresh.Start
+f.Intrinsic.Control.Try
+	gui.Form.GsgcCust.Visible(False)
+	
+	'Getdata
+	f.Intrinsic.Control.CallSub(GetData)
+	'Format Grid
+	f.Intrinsic.Control.CallSub(FormatGrid)
+	
+	gui.Form.GsgcCust.Visible(True)
+	
+f.Intrinsic.Control.Catch
+	f.Intrinsic.Control.CallSub(Catching)
+f.Intrinsic.Control.EndTry
+Program.Sub.Refresh.End
+
+'Get Data
+Program.Sub.GetData.Start
+f.Intrinsic.Control.Try
+	v.Local.sSQL.Declare(String)
+	v.Local.sSQL.Set("select RTRIM(C.CUSTOMER) CUSTOMER, RTRIM(M.NAME_CUSTOMER) CUST_NAME from GCG_6790_CUST C left join V_CUSTOMER_MASTER M on RTRIM(C.CUSTOMER) = RTRIM(M.CUSTOMER) order by C.CUSTOMER")
+	
+	f.ODBC.Connection!Con.OpenCompanyConnection
+		f.Intrinsic.Control.If(v.DataTable.dtCust.Exists)
+			f.Data.Datatable.Close("dtCust")
+		f.Intrinsic.Control.EndIf
+		f.Data.Datatable.CreateFromSQL("dtCust", "Con", v.Local.sSQL, True)
+	f.ODBC.Connection!Con.Close
+	
+	f.Data.Datatable.AddColumn("dtCust", "SELECT", Boolean, False)
+	
+f.Intrinsic.Control.Catch
+	f.Intrinsic.Control.CallSub(Catching)
+f.Intrinsic.Control.EndTry
+Program.Sub.GetData.End
+
+'Format
+Program.Sub.FormatGrid.Start
+f.Intrinsic.Control.Try
+	gui.Form.GsgcCust.AddGridviewFromDatatable("gvCust", "dtCust")
+	gui.Form.GsgcCust.SetGridviewProperty("gvCust", v.Enum.GridViewPropertyNames!EnableAppearanceEvenRow, True)
+	gui.Form.GsgcCust.SetGridviewProperty("gvCust", v.Enum.GridViewPropertyNames!Editable, True)
+	gui.Form.GsgcCust.SetGridviewProperty("gvCust", v.Enum.GridViewPropertyNames!ReadOnly, False)
+	gui.Form.GsgcCust.SetGridviewProperty("gvCust", "OptionsViewShowAutoFilterRow", true)
+	
+	gui.Form.GsgcCust.SetColumnProperty("gvCust", "CUSTOMER", v.Enum.ColumnPropertyNames!Caption, "CUSTOMER")
+	gui.Form.GsgcCust.SetColumnProperty("gvCust", "CUST_NAME", v.Enum.ColumnPropertyNames!Caption, "CUSTOMER NAME")
+	
+	gui.Form.GsgcCust.SetColumnProperty("gvCust", "CUSTOMER", v.Enum.ColumnPropertyNames!HeaderFontBold, True)
+	gui.Form.GsgcCust.SetColumnProperty("gvCust", "CUST_NAME", v.Enum.ColumnPropertyNames!HeaderFontBold, True)
+	gui.Form.GsgcCust.SetColumnProperty("gvCust", "SELECT", v.Enum.ColumnPropertyNames!HeaderFontBold, True)
+	
+	gui.Form.GsgcCust.SetColumnProperty("gvCust", "CUSTOMER", v.Enum.ColumnPropertyNames!HeaderHAlignment, "Center")
+	gui.Form.GsgcCust.SetColumnProperty("gvCust", "CUST_NAME", v.Enum.ColumnPropertyNames!HeaderHAlignment, "Center")
+	gui.Form.GsgcCust.SetColumnProperty("gvCust", "SELECT", v.Enum.ColumnPropertyNames!HeaderHAlignment, "Center")
+	
+	gui.Form.GsgcCust.SetColumnProperty("gvCust", "CUSTOMER", v.Enum.ColumnPropertyNames!MinWidth, 60)
+	gui.Form.GsgcCust.SetColumnProperty("gvCust", "CUST_NAME", v.Enum.ColumnPropertyNames!MinWidth, 200)
+	
+	gui.Form.GsgcCust.SetColumnProperty("gvCust", "SELECT", v.Enum.ColumnPropertyNames!VisibleIndex, 0)
+	gui.Form.GsgcCust.SetColumnProperty("gvCust", "CUSTOMER", v.Enum.ColumnPropertyNames!VisibleIndex, 1)
+	gui.Form.GsgcCust.SetColumnProperty("gvCust", "CUST_NAME", v.Enum.ColumnPropertyNames!VisibleIndex, 2)
+	
+	
+'	gui.Form.GsgcCust.ColumnEdit("gvCust", "HOLD_TYPE", "DropdownList", "Limit Hold*!*Always Hold")
+	
+	gui.Form.GsgcCust.SetColumnProperty("gvCust", "CUSTOMER", v.Enum.ColumnPropertyNames!AllowEdit, False)
+	gui.Form.GsgcCust.SetColumnProperty("gvCust", "CUST_NAME", v.Enum.ColumnPropertyNames!AllowEdit, False)
+	gui.Form.GsgcCust.SetColumnProperty("gvCust", "SELECT", v.Enum.ColumnPropertyNames!AllowEdit, False)
+	
+	gui.Form.GsgcCust.MainView("gvCust")
+f.Intrinsic.Control.Catch
+
+	f.Intrinsic.Control.CallSub(Catching)
+f.Intrinsic.Control.EndTry
+Program.Sub.FormatGrid.End
+
+'Catch
+Program.Sub.Catching.Start
+f.Intrinsic.UI.Msgbox(v.Ambient.ErrorDescription)
+Program.Sub.Catching.End
+
+'Unload
+Program.Sub.Unload.Start
+f.Intrinsic.Control.End
+Program.Sub.Unload.End
+
+'Add a Customer
+Program.Sub.cmdAdd_Click.Start
+f.Intrinsic.Control.Try
+	v.Local.sSQL.Declare(String)
+	v.Local.sRet.Declare(String)
+	v.Local.sCust.Declare(String)
+	
+	f.ODBC.Connection!Con.OpenCompanyConnection
+	f.Intrinsic.UI.SetBRowserHotTypeAhead(True)
+	f.Intrinsic.UI.Browser("205","", v.Local.sRet)
+	
+	f.Intrinsic.Control.If(v.Local.sRet,!=, "***CANCEL***")
+		f.Intrinsic.String.Split(v.Local.sRet,"*!*", v.Local.sRet)
+		v.Local.sCust.Set(v.Local.sRet(0))
+		f.Intrinsic.String.Build("select * from GCG_6790_CUST where RTRIM(CUSTOMER)='{0}'", v.Local.sCust.Trim, v.Local.sSQL)
+		v.Local.sRet.Set("")
+		f.ODBC.Connection!Con.ExecuteAndReturn(v.Local.sSQL, v.Local.sRet)
+		f.Intrinsic.Control.If(v.Ambient.ExecuteAndReturnEOF,=,True)
+			f.Intrinsic.String.Build("insert into GCG_6790_CUST (CUSTOMER) values('{0}')", v.Local.sCust.Trim, v.Local.sSQL)
+			f.ODBC.Connection!Con.Execute(v.Local.sSQL)
+		f.Intrinsic.Control.Else
+			f.Intrinsic.UI.Msgbox("This Customer is already exist in the Maintenance Table")
+		f.Intrinsic.Control.EndIf
+	f.Intrinsic.Control.EndIf
+	
+	f.ODBC.Connection!Con.Close
+	
+	f.Intrinsic.Control.CallSub(Refresh)
+	
+f.Intrinsic.Control.Catch
+	f.Intrinsic.Control.CallSub(Catching)
+f.Intrinsic.Control.EndTry
+Program.Sub.cmdAdd_Click.End
+
+'Cell Value Changed
+Program.Sub.GsgcCust_CellValueChanged.Start
+f.Intrinsic.Control.Try
+	
+f.Intrinsic.Control.Catch
+	f.Intrinsic.Control.CallSub(Catching)
+	f.ODBC.Connection!Con.Close
+f.Intrinsic.Control.EndTry
+Program.Sub.GsgcCust_CellValueChanged.End
+
+'Cell click 
+'SELECT
+Program.Sub.GsgcCust_RowCellClick.Start
+f.Intrinsic.Control.Try
+	f.Intrinsic.Control.If(v.Args.Column,=,"SELECT")
+		f.Intrinsic.Control.If(v.DataTable.dtCust(v.Args.RowIndex).SELECT!FieldVal,=,True)
+			f.Data.Datatable.SetValue("dtCust", v.Args.RowIndex, "SELECT", False)
+		f.Intrinsic.Control.Else
+			f.Data.Datatable.SetValue("dtCust", v.Args.RowIndex, "SELECT", True)
+		f.Intrinsic.Control.EndIf
+	f.Intrinsic.Control.EndIf
+	
+f.Intrinsic.Control.Catch
+	f.Intrinsic.Control.CallSub(Catching)
+	f.ODBC.Connection!Con.Close
+f.Intrinsic.Control.EndTry
+Program.Sub.GsgcCust_RowCellClick.End
+
+'Delete rows
+Program.Sub.cmdDelRows_Click.Start
+f.Intrinsic.Control.Try
+	v.Local.sSQL.Declare(String)
+	v.Local.sCustomer.Declare(String)
+	v.Local.iCounter.Declare(Long)
+	
+	'get selected rows
+	f.Data.DataView.Create("dtCust", "dvSelected", 22, "SELECT=TRUE", "")
+	f.Data.DataView.ToDataTable("dtCust", "dvSelected", "dtSelected", False)
+	f.Data.DataView.Close("dtCust", "dvSelected")
+	
+	f.Intrinsic.Control.If(v.DataTable.dtSelected.RowCount,>,0)
+		f.Intrinsic.Control.For(v.Local.iCounter, 0, v.DataTable.dtSelected.RowCount--, 1)
+			f.Intrinsic.Control.If(v.Local.iCounter,=,0)
+				f.Intrinsic.String.Build("'{0}'", v.DataTable.dtSelected(v.Local.iCounter).CUSTOMER!FieldValTrim, v.Local.sCustomer)
+			f.Intrinsic.Control.Else
+				f.Intrinsic.String.Build("{0},'{1}'",  v.Local.sCustomer, v.DataTable.dtSelected(v.Local.iCounter).CUSTOMER!FieldValTrim, v.Local.sCustomer)
+			f.Intrinsic.Control.EndIf
+		f.Intrinsic.Control.Next(v.Local.iCounter)
+		
+		f.Intrinsic.String.Build("delete from GCG_6790_CUST where RTRIM(CUSTOMER) in ({0})", v.Local.sCustomer, v.Local.sSQL)
+		
+		f.ODBC.Connection!Con.OpenCompanyConnection
+			f.ODBC.Connection!Con.Execute(v.Local.sSQL)
+		f.ODBC.Connection!Con.Close
+		
+	f.Intrinsic.Control.CallSub(Refresh)
+		
+	f.Intrinsic.Control.Else
+		f.Data.Datatable.Close("dtSelected")
+	f.Intrinsic.Control.EndIf
+	
+f.Intrinsic.Control.Catch
+	f.Intrinsic.Control.CallSub(Catching)
+	f.ODBC.Connection!Con.Close
+f.Intrinsic.Control.EndTry
+Program.Sub.cmdDelRows_Click.End
+
+Program.Sub.Comments.Start
+${$5$}$3.0.0.0$}$1
+${$6$}$nle$}$20220620123229227$}$kjzCRYkA6UEoRnCwndYnRZx+VYO5SvmIj6rtZPGZAgp9kgd5hdDpJatsbZLw8fSX
+Program.Sub.Comments.End
